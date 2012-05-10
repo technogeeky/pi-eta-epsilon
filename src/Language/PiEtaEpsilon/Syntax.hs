@@ -6,24 +6,33 @@ import Control.Monad.State
 import Control.Monad.Trans
 import Control.Monad.Writer hiding (Product(..), Sum(..))
 import Control.Unification
+
 import Data.Foldable
 import Data.Functor.Fixedpoint
 import Data.Traversable
+import Data.Data
+import Data.Maybe
+import Data.Typeable
+
+import Data.Unfoldable
+import Data.Unfolder
+
+import System.Random
+
 import Prelude hiding (Either(..), negate)
 import GHC.Generics hiding ((:*:))
-import Data.Data
-import Data.Typeable
-import Test.QuickCheck
+import qualified Test.QuickCheck as QC
 
+import Test.QuickCheck hiding (choose)
 -- types {{{1
 -- Type {{{2
-data Type
+data Type a
 	= Zero
 	| One
-	| Sum        Type Type
-	| Product    Type Type
-	| Negative   Type
-	| Reciprocal Type
+	| Sum        (Type a) (Type a)
+	| Product    (Type a) (Type a)
+	| Negative   (Type a)
+	| Reciprocal (Type a)
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
 
 -- values and unification variables {{{2
@@ -35,28 +44,70 @@ data ValueF t
 	| Negate      t
 	| Reciprocate t
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic, Functor, Foldable, Traversable)
+
 type Value = Fix ValueF
 
+
+instance Unfoldable ValueF where
+     unfold fa = choose
+          [ pure Unit
+          , Left         <$> fa
+          , Right        <$> fa
+          , Tuple        <$> fa <*> fa
+          , Negate       <$> fa
+          , Reciprocate  <$> fa
+          ]
+
+instance Unfoldable Type where
+     unfold fa = choose
+          [ pure Zero
+          -- ...
+          , pure One
+          -- ...
+          , Sum <$> unfold fa <*> unfold fa
+          , Product <$> unfold fa <*> unfold fa
+          , Negative <$> unfold fa
+          , Reciprocal <$> unfold fa
+          ]
+
+typeShapes :: [Type ()]
+typeShapes = take 1000 unfoldBF_
+
+randomType :: IO (Type Bool)
+randomType = getStdRandom randomDefault
+
+-- ^ somewhat amusing... I got back:
+--  Zero
+--  One
+--  <... 100 lines ... >
+
+
+valueShapes :: [ValueF ()]
+valueShapes = take 7 unfoldBF_
+
+randomValueF :: IO (ValueF Bool)
+randomValueF = getStdRandom randomDefault
+
 -- isomorphisms {{{2
-data IsoBase
-	= IdentityS Type | CommutativeS Type Type | AssociativeS Type Type Type
-	| IdentityP Type | CommutativeP Type Type | AssociativeP Type Type Type
-	| DistributiveZero Type
-	| DistributivePlus Type Type Type
+data IsoBase a
+	= IdentityS (Type a) | CommutativeS (Type a) (Type a) | AssociativeS (Type a) (Type a) (Type a)
+	| IdentityP (Type a) | CommutativeP (Type a) (Type a) | AssociativeP (Type a) (Type a) (Type a)
+	| DistributiveZero (Type a)
+	| DistributivePlus (Type a) (Type a) (Type a)
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
 
-data Iso
-	= Eliminate IsoBase
-	| Introduce IsoBase
+data Iso a
+	= Eliminate (IsoBase a)
+	| Introduce (IsoBase a)
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
 
 -- Term {{{2
-data Term
-	= Base Iso
-	| Id Type
-	| Term ::: Term
-	| Term :+: Term
-	| Term :*: Term
+data Term a
+	= Base (Iso a)
+	| Id (Type a)
+	| (Term a) ::: (Term a)
+	| (Term a) :+: (Term a)
+	| (Term a) :*: (Term a)
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
 
 -- convenience names for Values {{{1
@@ -89,11 +140,12 @@ var = UVar
 ----------                          Arbitrary Instances                                  -----------
 ----------------------------------------------------------------------------------------------------
 
+{-
 instance Arbitrary Type where
     arbitrary = sized arb' where
         arb' size = do
             let maxChoice = if size == (0 :: Int) then 1 :: Int else 5
-            c <- choose(0, maxChoice)
+            c <- QC.choose(0, maxChoice)
             case c of
                 0 -> return Zero
                 1 -> return One
@@ -113,7 +165,7 @@ instance Arbitrary Value where
     arbitrary = sized arb' where
         arb' size = do
             let maxChoice = if size == 0 then 1 else 5
-            c <- choose(0 :: Int, maxChoice)
+            c <- QC.choose(0 :: Int, maxChoice)
             case c of
                 0 -> return unit
                 1 -> left   <$>  arb' (size - 1)
@@ -122,10 +174,12 @@ instance Arbitrary Value where
                 4 -> negate <$>  arb' (size - 1)
                 5 -> reciprocate <$> arb' (size - 1)
 
+-}
 -- pretty printer {{{1
 ------------------------------------------------------------------------------------
 ----                              PrettyPrint                               --------
 ------------------------------------------------------------------------------------
+{-
 pprType :: Type -> String
 pprType Zero = "0"
 pprType One  = "1"
@@ -133,3 +187,4 @@ pprType (Sum     x y) = "(" ++ pprType x ++ " + " ++ pprType y ++ ")"
 pprType (Product x y) = "(" ++ pprType x ++ " * " ++ pprType y ++ ")"
 pprType (Negative   x) = "(" ++ " - " ++ pprType x ++ ")"
 pprType (Reciprocal x) = "(" ++ " / " ++ pprType x ++ ")"
+-}
