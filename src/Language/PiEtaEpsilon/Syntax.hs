@@ -76,7 +76,7 @@ instance Unfoldable Type where
           ]
 
 typeShapes :: [Type ()]
-typeShapes = take 1000 unfoldBF_
+typeShapes = take 30 unfoldBF_
 
 typeRand :: IO (Type Bool)
 typeRand = getStdRandom randomDefault
@@ -119,7 +119,7 @@ instance Unfoldable Iso where
           ]
 
 isoShapes :: [Iso ()]
-isoShapes = take 100 unfoldBF_
+isoShapes = take 300 unfoldBF_
 
 isoRand :: IO (Iso Bool)
 isoRand = getStdRandom randomDefault

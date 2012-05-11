@@ -13,10 +13,13 @@ import Control.Unification.IntVar
 import Prelude hiding (Either(..))
 import GHC.Generics hiding ((:*:))
 
+import Control.Unification.IntVar
 import Data.Unfoldable
 import Data.Unfolder
+import Data.Functor.Compose
+import Data.Functor.Constant
 
-type UValue = UTerm ValueF IntVar
+type UValue a = UTerm ValueF IntVar
 
 instance Unfoldable (UTerm ValueF) where
      unfold fa = choose
@@ -26,7 +29,7 @@ data Context a
 	= Box
 	| Fst  (Context a) (Term a) | Snd  (Term a) (Context a)
 	| LSum (Context a) (Term a) | RSum (Term a) (Context a)
-	| LProduct (Context a) (Term a) UValue | RProduct (Term a) UValue (Context a)
+	| LProduct (Context a) (Term a) (UValue a) | RProduct (Term a) (UValue a) (Context a)
 	deriving (Show)
 
 instance Unfoldable Context where
@@ -36,13 +39,13 @@ instance Unfoldable Context where
           , Snd <$> unfold fa <*> unfold fa
           , LSum <$> unfold fa <*> unfold fa
           , RSum <$> unfold fa <*> unfold fa
---          , LProduct <$> unfold fa <*> unfold fa
+--          , LProduct <$> unfold fa <*> unfold fa <*> ((fmap getConstant . getCompose) <$> unfold fa)
           ]
 data MachineState a = MachineState
 	{ forward     :: Bool
 	, descending  :: Bool
 	, term        :: Term a
-	, output      :: UValue
+	, output      :: UValue a
 	, context     :: Context a
 	} deriving (Show)
 
@@ -90,7 +93,7 @@ equate t t' = runIdentityT (t =:= t')
 newVariable :: BindingMonad t v m => m (UTerm t' v)
 newVariable = var <$> freeVar
 
-evalIso :: Iso a -> UValue -> PEET m UValue
+evalIso :: Iso a -> UValue a -> PEET m (UValue a)
 evalIso (Eliminate (IdentityS t)) v = newVariable >>= \v' -> equate v (right v') >> return v'
 evalIso (Introduce (IdentityS t)) v = return (right v)
 evalIso (Eliminate (CommutativeS t1 t2)) v =
@@ -134,7 +137,7 @@ evalIso (Introduce (DistributivePlus t1 t2 t3)) v = newVariable >>= \v3 ->
 	    (newVariable >>= \v1 -> equate v (left  (tuple v1 v3)) >> return (tuple (left  v1) v3))
 	<|> (newVariable >>= \v2 -> equate v (right (tuple v2 v3)) >> return (tuple (right v2) v3))
 
-initialize :: Term a -> UValue -> MachineState a
+initialize :: Term a -> UValue a -> MachineState a
 initialize t v = MachineState {
 	forward = True,
 	descending = True,
@@ -199,5 +202,5 @@ eval m
 	| otherwise = stepEval m >>= eval
 	where freeze = runIdentityT . applyBindings
 
-topLevel :: Term a -> UValue -> [UValue]
+topLevel :: Term a -> UValue a -> [UValue a]
 topLevel t v = map output . runPEE . eval $ initialize t v
