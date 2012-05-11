@@ -16,14 +16,13 @@ import Data.Typeable
 
 import Data.Unfoldable
 import Data.Unfolder
-
+import Test.QuickCheck hiding (choose)
 import System.Random
 
 import Prelude hiding (Either(..), negate)
 import GHC.Generics hiding ((:*:))
 import qualified Test.QuickCheck as QC
 
-import Test.QuickCheck hiding (choose)
 -- types {{{1
 -- Type {{{2
 data Type a
@@ -58,6 +57,12 @@ instance Unfoldable ValueF where
           , Reciprocate  <$> fa
           ]
 
+valuefShapes :: [ValueF ()]
+valuefShapes = take 100 unfoldBF_
+
+valuefRand :: IO (ValueF Bool)
+valuefRand = getStdRandom randomDefault
+
 instance Unfoldable Type where
      unfold fa = choose
           [ pure Zero
@@ -73,20 +78,14 @@ instance Unfoldable Type where
 typeShapes :: [Type ()]
 typeShapes = take 1000 unfoldBF_
 
-randomType :: IO (Type Bool)
-randomType = getStdRandom randomDefault
+typeRand :: IO (Type Bool)
+typeRand = getStdRandom randomDefault
 
 -- ^ somewhat amusing... I got back:
 --  Zero
 --  One
 --  <... 100 lines ... >
 
-
-valueShapes :: [ValueF ()]
-valueShapes = take 7 unfoldBF_
-
-randomValueF :: IO (ValueF Bool)
-randomValueF = getStdRandom randomDefault
 
 -- isomorphisms {{{2
 data IsoBase a
@@ -96,10 +95,34 @@ data IsoBase a
 	| DistributivePlus (Type a) (Type a) (Type a)
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
 
+instance Unfoldable IsoBase where
+     unfold fa = choose
+          [ IdentityS <$> unfold fa
+          , IdentityP <$> unfold fa
+          , CommutativeS <$> unfold fa <*> unfold fa
+          , CommutativeP <$> unfold fa <*> unfold fa
+          , AssociativeS <$> unfold fa <*> unfold fa <*> unfold fa
+          , AssociativeP <$> unfold fa <*> unfold fa <*> unfold fa
+          , DistributiveZero <$> unfold fa
+          , DistributivePlus <$> unfold fa <*> unfold fa <*> unfold fa
+          ]
 data Iso a
 	= Eliminate (IsoBase a)
 	| Introduce (IsoBase a)
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
+
+
+instance Unfoldable Iso where
+     unfold fa = choose
+          [ Eliminate <$> unfold fa
+          , Introduce <$> unfold fa
+          ]
+
+isoShapes :: [Iso ()]
+isoShapes = take 100 unfoldBF_
+
+isoRand :: IO (Iso Bool)
+isoRand = getStdRandom randomDefault
 
 -- Term {{{2
 data Term a
@@ -109,6 +132,21 @@ data Term a
 	| (Term a) :+: (Term a)
 	| (Term a) :*: (Term a)
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
+
+
+instance Unfoldable Term where
+     unfold fa = choose
+          [ Base    <$> unfold fa
+          , Id      <$> unfold fa
+          , (:::)   <$> (unfold fa) <*> (unfold fa)
+          , (:+:)   <$> (unfold fa) <*> (unfold fa)
+          , (:*:)   <$> (unfold fa) <*> (unfold fa)
+          ]
+
+termShapes :: [Term ()]
+termShapes = take 100 unfoldBF_
+randomTerm :: IO (Term Bool)
+randomTerm = getStdRandom randomDefault
 
 -- convenience names for Values {{{1
 class Particle a where

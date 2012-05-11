@@ -5,6 +5,7 @@ import Data.Typeable
 import Data.Data
 import Language.PiEtaEpsilon.Parser
 
+{-
 typ :: QuasiQuoter
 typ = QuasiQuoter quoteExprExp quoteExprPat undefined undefined
 
@@ -19,7 +20,7 @@ quoteExprExp r =  do
     dataToExpQ (const Nothing) $ parsed_expr
     
 quoteExprPat = undefined
-
+-}
 {- TODO    
 data MetaType = MZero 
               | MOne 

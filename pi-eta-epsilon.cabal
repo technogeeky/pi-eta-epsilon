@@ -25,4 +25,6 @@ library
                        QuickCheck >= 2.4 && < 2.5,
                        template-haskell >= 2.7 && < 2.8,
                        transformers >= 0.2 && < 0.4,
-                       unification-fd >= 0.7 && < 0.8
+                       unification-fd >= 0.7 && < 0.8,
+                       random >= 1.0 && < 1.2,
+                       unfoldable >= 0.5 && < 0.7

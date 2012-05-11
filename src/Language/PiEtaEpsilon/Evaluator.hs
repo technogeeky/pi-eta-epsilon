@@ -2,6 +2,7 @@
 module Language.PiEtaEpsilon.Evaluator where
 
 import Language.PiEtaEpsilon.Syntax
+import Language.PiEtaEpsilon.Syntax (ValueF)
 import Control.Applicative
 import Control.Monad.Error
 import Control.Monad.Logic
@@ -12,21 +13,37 @@ import Control.Unification.IntVar
 import Prelude hiding (Either(..))
 import GHC.Generics hiding ((:*:))
 
+import Data.Unfoldable
+import Data.Unfolder
+
 type UValue = UTerm ValueF IntVar
 
-data Context
+instance Unfoldable (UTerm ValueF) where
+     unfold fa = choose
+          [ 
+          ]
+data Context a
 	= Box
-	| Fst  Context Term | Snd  Term Context
-	| LSum Context Term | RSum Term Context
-	| LProduct Context Term UValue | RProduct Term UValue Context
+	| Fst  (Context a) (Term a) | Snd  (Term a) (Context a)
+	| LSum (Context a) (Term a) | RSum (Term a) (Context a)
+	| LProduct (Context a) (Term a) UValue | RProduct (Term a) UValue (Context a)
 	deriving (Show)
 
-data MachineState = MachineState
+instance Unfoldable Context where
+     unfold fa = choose
+          [ pure Box
+          , Fst <$> unfold fa <*> unfold fa
+          , Snd <$> unfold fa <*> unfold fa
+          , LSum <$> unfold fa <*> unfold fa
+          , RSum <$> unfold fa <*> unfold fa
+--          , LProduct <$> unfold fa <*> unfold fa
+          ]
+data MachineState a = MachineState
 	{ forward     :: Bool
 	, descending  :: Bool
-	, term        :: Term
+	, term        :: Term a
 	, output      :: UValue
-	, context     :: Context
+	, context     :: Context a
 	} deriving (Show)
 
 newtype PEET m a = PEET { unPEET :: IntBindingT ValueF (LogicT m) a }
@@ -56,11 +73,11 @@ instance Unifiable ValueF where
 	zipMatch (Reciprocate a   ) (Reciprocate b   ) = Just (Reciprocate (a, b)         )
 	zipMatch _ _ = Nothing
 
-adjointIso :: Iso -> Iso
+adjointIso :: Iso a -> Iso a
 adjointIso (Eliminate b) = Introduce b
 adjointIso (Introduce b) = Eliminate b
 
-adjoint :: Term -> Term
+adjoint :: Term a -> Term a
 adjoint (Base iso)  = Base (adjointIso iso)
 adjoint (Id   t  )  = Id t
 adjoint (t1 ::: t2) = adjoint t2 ::: adjoint t1
@@ -73,7 +90,7 @@ equate t t' = runIdentityT (t =:= t')
 newVariable :: BindingMonad t v m => m (UTerm t' v)
 newVariable = var <$> freeVar
 
-evalIso :: Iso -> UValue -> PEET m UValue
+evalIso :: Iso a -> UValue -> PEET m UValue
 evalIso (Eliminate (IdentityS t)) v = newVariable >>= \v' -> equate v (right v') >> return v'
 evalIso (Introduce (IdentityS t)) v = return (right v)
 evalIso (Eliminate (CommutativeS t1 t2)) v =
@@ -117,7 +134,7 @@ evalIso (Introduce (DistributivePlus t1 t2 t3)) v = newVariable >>= \v3 ->
 	    (newVariable >>= \v1 -> equate v (left  (tuple v1 v3)) >> return (tuple (left  v1) v3))
 	<|> (newVariable >>= \v2 -> equate v (right (tuple v2 v3)) >> return (tuple (right v2) v3))
 
-initialize :: Term -> UValue -> MachineState
+initialize :: Term a -> UValue -> MachineState a
 initialize t v = MachineState {
 	forward = True,
 	descending = True,
@@ -126,11 +143,11 @@ initialize t v = MachineState {
 	context = Box
 	}
 
-isFinal :: MachineState -> Bool
+isFinal :: MachineState a -> Bool
 isFinal (MachineState { forward = True, descending = False, context = Box }) = True
 isFinal _ = False
 
-stepEval :: MachineState -> PEET m MachineState
+stepEval :: MachineState a -> PEET m (MachineState a)
 stepEval m@(MachineState { forward = True, descending = True }) = case term m of
 	Base iso  -> do
 		v <- evalIso iso (output m)
@@ -176,11 +193,11 @@ stepEval m@(MachineState { forward = False, descending = False }) = case term m 
 		equate (tuple v1 v2) (output m)
 		return m { term = t2, output = v2, context = RProduct t1 v1 (context m) }
 
-eval :: MachineState -> PEET m MachineState
+eval :: MachineState a -> PEET m (MachineState a)
 eval m
 	| isFinal m = freeze (output m) >>= \v -> return m { output = v }
 	| otherwise = stepEval m >>= eval
 	where freeze = runIdentityT . applyBindings
 
-topLevel :: Term -> UValue -> [UValue]
+topLevel :: Term a -> UValue -> [UValue]
 topLevel t v = map output . runPEE . eval $ initialize t v
