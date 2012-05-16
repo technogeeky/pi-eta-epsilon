@@ -34,7 +34,7 @@ library
                     test-framework >= 0.6 && < 0.7,
                     checkers >= 0.2.9 && < 0.4,
                     DebugTraceHelpers >= 0.12 && < 1.0,
-                    multiplate >= 0.1 && < 0.2
+                    multiplate >= 0.0.1 && < 0.0.2
 
 
 test-suite tests

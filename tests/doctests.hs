@@ -11,6 +11,7 @@ main = doctest [
                , "--optghc=-optPdist/build/autogen/cabal_macros.h"
                , "src/Language/PiEtaEpsilon/Examples.hs"
                , "src/Language/PiEtaEpsilon/Syntax.hs"
+               , "src/Language/PiEtaEpsilon/Multiplate.hs"
                , "src/Language/PiEtaEpsilon/Pi.hs"
                ]
 

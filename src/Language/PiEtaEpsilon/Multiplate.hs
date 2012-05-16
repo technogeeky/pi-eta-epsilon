@@ -37,7 +37,7 @@ import Data.Generics.Multiplate
 -- import Control.Unification
 
 -- 7) p-e-e specific
-import Language.PiEtaEpsilon.Syntax (Type(..), ValueF(..), IsoBase(..), Iso(..), Term(..))
+import Language.PiEtaEpsilon.Syntax (Type(..), ValueF(..), IsoBase(..), Iso(..), Term(..), adjoint, adjointIso)
 import Language.PiEtaEpsilon.Evaluator (UValue, Context(..), MachineState(..), PEET(..))
 
 -- 8) just to make types easier to read
@@ -123,14 +123,96 @@ instance Multiplate Plate where
 
 
 
-getVPlate :: Plate (Constant [Iso])
-getVPlate = purePlate { base = \v -> Constant [v] }
+getIsosP :: Plate (Constant [Iso])
+getIsosP = purePlate { base = \v -> Constant [v] }
 
-varsPlate :: Plate (Constant [Iso])
-varsPlate = preorderFold getVPlate
+preordFoldIsos :: Plate (Constant [Iso])
+preordFoldIsos = preorderFold getIsosP
 
+postordFoldIsos :: Plate (Constant [Iso])
+postordFoldIsos = postorderFold getIsosP
+
+
+testIsos = foldFor term1 preordFoldIsos
+testIsosAlt = foldFor term1 postordFoldIsos
+
+
+--   
+--             Testing Goes Here
+--
+traceS f = prepareS ::: (Id :+: f) ::: adjoint prepareS 
+traceP f = prepareP ::: (Id :*: f) ::: adjoint prepareP 
 prepareP = Base (Introduce IdentityP) ::: (Base (Eliminate SplitP) :+: Id) ::: Base (Introduce AssociativeP)
+prepareS = Base (Introduce IdentityS) ::: (Base (Eliminate SplitS) :+: Id) ::: Base (Introduce AssociativeS)
 
 
---testIsos :: [Iso]
-testIsos = foldFor term1 varsPlate
+ 
+-- |
+-- >>> testIsos $ prepareP
+-- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP]
+ 
+-- |
+-- >>> testIsos $ adjoint prepareP
+-- [Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP]
+ 
+-- |
+-- >>> testIsos $ prepareS
+-- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS]
+ 
+-- |
+-- >>> testIsos $ adjoint prepareS
+-- [Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
+ 
+-- |
+-- >>> testIsos $ traceS Id
+-- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
+ 
+-- |
+-- >>> testIsos $ traceP Id
+-- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP]
+ 
+-- |
+-- >>> testIsos $ traceP (traceS Id)
+-- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP]
+ 
+-- |
+-- >>> testIsos $ traceS (traceP Id)
+-- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
+
+
+-- Postorder Folds are (evidently) the same thing here:
+--
+
+-- |
+-- >>> testIsosAlt $ prepareP
+-- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP]
+ 
+-- |
+-- >>> testIsosAlt $ adjoint prepareP
+-- [Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP]
+ 
+-- |
+-- >>> testIsosAlt $ prepareS
+-- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS]
+ 
+-- |
+-- >>> testIsosAlt $ adjoint prepareS
+-- [Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
+ 
+-- |
+-- >>> testIsosAlt $ traceS Id
+-- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
+ 
+-- |
+-- >>> testIsosAlt $ traceP Id
+-- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP]
+ 
+-- |
+-- >>> testIsosAlt $ traceP (traceS Id)
+-- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP]
+ 
+-- |
+-- >>> testIsosAlt $ traceS (traceP Id)
+-- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
+
+
