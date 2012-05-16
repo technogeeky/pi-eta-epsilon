@@ -146,7 +146,7 @@ stepEval m@(MachineState { forward = True, descending = True }) = case term m of
 	Base iso  -> do
 		v <- evalIso iso (output m)
 		return m { descending = False, output = v }
-	Id        -> return m { descending = False }
+--	Base Id        -> return m { descending = False }
 	t1 ::: t2 -> return m { term = t1, context = Fst (context m) t2 }
 	t1 :+: t2 -> transform1 left  (\v     -> m { term = t1, output = v , context = LSum (context m) t2        }) (output m)
 	         <|> transform1 right (\v     -> m { term = t2, output = v , context = RSum t1 (context m)        }) (output m)
@@ -176,7 +176,7 @@ stepEval m@(MachineState { forward = False, descending = False }) = case term m 
 	Base iso  -> do
 		v <- evalIso (adjointIso iso) (output m)
 		return m { descending = True, output = v }
-	Id        -> return m { descending = True }
+--	Base Id        -> return m { descending = True }
 	t1 ::: t2 -> return m { term = t2, context = Snd t1 (context m) }
 	t1 :+: t2 -> transform1 left  (\v     -> m { term = t1, output = v , context = LSum (context m) t2        }) (output m)
 	         <|> transform1 right (\v     -> m { term = t2, output = v , context = RSum t1 (context m)        }) (output m)

@@ -24,15 +24,15 @@ BSplitP.           BaseIso7    ::= "-*<"                ;
 BDistributiveZero. BaseIso8    ::= "distributiveZero"   ;
 BDistributivePlus. BaseIso9    ::= "distributivePlus"   ;
 --
-IEliminate.        Iso0   ::= "#"     BaseIso            ;
-IIntroduce.        Iso1   ::= "'"     BaseIso            ;
+IEliminate.        Iso0   ::= "#"     BaseIso           ;
+IIntroduce.        Iso1   ::= "'"     BaseIso           ;
+IId.               Iso2   ::= "@"                     ;
 --
 --Terms
 TCompose.          Term0    ::= Term1 "." Term1        ;
 TPlus.             Term1    ::= Term1 "+" Term2        ;
 TTimes.            Term2    ::= Term2 "*" Term3        ;
 TBase.             Term3    ::= "<" Iso                ;
-TId.               Term4    ::= Ident                  ;
 
 
 _.              Term      ::= Term0        ;

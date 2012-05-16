@@ -75,21 +75,21 @@ instance Arbitrary BaseIso where
                 
 instance Arbitrary Iso where
     arbitrary = do
-        i <- choose'(0, 1)
+        i <- choose'(0, 2)
         case i of
             0 -> IEliminate <$> arbitrary
             1 -> IIntroduce <$> arbitrary
+            2 -> pure IId
 
 instance Arbitrary Term where
     arbitrary = sized arb where
         arb depth = do
-            i <- choose'(if depth < 1 then 0 else 4, 4)
+            i <- choose'(if depth < 1 then 0 else 3, 3)
             case i of
                 0 -> TCompose <$> arb (depth `div` 2) <*> arb (depth `div` 2)
                 1 -> TPlus    <$> arb (depth `div` 2) <*> arb (depth `div` 2)
                 2 -> TTimes   <$> arb (depth `div` 2) <*> arb (depth `div` 2)
                 3 -> TBase    <$> arbitrary
-                4 -> (TId . Ident)      <$> arbitrary
 
 
 ---------------------------
@@ -193,8 +193,8 @@ tests = [
                 testCase "test_parseTermIsobase_12" test_parseTermTerm_12,
                 testCase "test_parseTermIsobase_13" test_parseTermTerm_13,
                 testCase "test_parseTermIsobase_14" test_parseTermTerm_14,
-                testCase "test_parseTermIsobase_15" test_parseTermTerm_15,
-                testCase "test_parseTermIsobase_16" test_parseTermTerm_16
+                testCase "test_parseTermIsobase_15" test_parseTermTerm_15
+--                testCase "test_parseTermIsobase_16" test_parseTermTerm_16
                 --pprParserInvPropL "Term" pprTTerm parseTTerm
                 --pprParserInvPropR "Term" pprTTerm parseTTerm -- this test diverges for some reason
             ],
@@ -241,7 +241,7 @@ test_parseTermTerm_12 = TCompose (TBase $ IEliminate $ BAssociativeS) (TBase $ I
 test_parseTermTerm_13 = TTimes  (TBase $ IEliminate $ BIdentityS)    (TBase $ IIntroduce $ BAssociativeS)  @?= [term| (< (# <=+=>)) * (< (' |+|+|)) |] 
 test_parseTermTerm_14 = TPlus   (TBase $ IEliminate $ BIdentityS)    (TBase $ IIntroduce $ BAssociativeS)  @?= [term| (< (# <=+=>)) + (< (' |+|+|)) |] 
 test_parseTermTerm_15 = (TBase $ IEliminate $ BAssociativeP)                                               @?= [term| < # |*|*|                     |] 
-test_parseTermTerm_16 = TId      (Ident "i")                                                               @?= [term| i                             |] 
+-- test_parseTermTerm_16 = TId      (Ident "i")                                                               @?= [term| i                             |] 
 
 -- | Value Tests
 --------------------------------------------------------------------------------

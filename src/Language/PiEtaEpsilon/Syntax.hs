@@ -47,12 +47,12 @@ data IsoBase
 data Iso
 	= Eliminate IsoBase
 	| Introduce IsoBase
+     | Id
 	deriving (Eq, Ord, Show, Read, Data, Typeable, Generic)
 
 -- Term {{{2
 data Term
 	= Base Iso
-	| Id
 	| Term ::: Term
 	| Term :+: Term
 	| Term :*: Term
@@ -85,12 +85,12 @@ var = UVar
 
 -- adjoints {{{1
 adjointIso :: Iso -> Iso
+adjointIso (Id         ) = Id
 adjointIso (Eliminate b) = Introduce b
 adjointIso (Introduce b) = Eliminate b
 
 adjoint :: Term -> Term
 adjoint (Base iso)  = Base (adjointIso iso)
-adjoint  Id         = Id
 adjoint (t1 ::: t2) = adjoint t2 ::: adjoint t1
 adjoint (t1 :+: t2) = adjoint t1 :+: adjoint t2
 adjoint (t1 :*: t2) = adjoint t1 :*: adjoint t2
