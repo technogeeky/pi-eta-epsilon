@@ -53,8 +53,8 @@ import Control.Monad.Logic
 data Plate f = Plate
      {
      -- resulting in terms
-       base    :: Iso -> f Term
-     , idT     ::        f Term
+       base    :: Iso          -> f Term
+     , idT     ::         Term -> f Term
      , comp    :: Term -> Term -> f Term
      , plus    :: Term -> Term -> f Term
      , times   :: Term -> Term -> f Term
@@ -71,11 +71,11 @@ data Plate f = Plate
 
 
 term1 :: Plate f -> Term -> f Term
-term1 plate (Base i) = base plate i
---term1 plate (Id) = idT plate
-term1 plate ((:::) l r) = comp plate l r
-term1 plate ((:+:) l r) = plus plate l r
-term1 plate ((:*:) l r) = times plate l r
+term1 plate (Base i)     = base    plate i
+term1 plate ((:::) l r)  = comp    plate l r
+term1 plate ((:+:) l r)  = plus    plate l r
+term1 plate ((:*:) l r)  = times   plate l r
+term1 plate term         = idT     plate term
 
 
 -- I think this is wrong... I think these should be curried over one argument
@@ -100,14 +100,13 @@ cxtR plate t (RSum _ c) = rsum plate t c
 
 -- I guess i'll write the last two manually? maybe not:
 
-{-
 instance Multiplate Plate where
   multiplate plate = Plate
      (\i -> pure (Base i))
---     (\t -> pure (Id))
-     (\l r -> (:::) <$> term2 plate l r <*> term2 plate r l)
-     (\l r -> (:+:) <$> term2 plate l r <*> term2 plate r l)
-     (\l r -> (:*:) <$> term2 plate l r <*> term2 plate r l)
+     (\t -> pure t)
+     (\l r -> (:::) <$> term1 plate l <*> term1 plate r)
+     (\l r -> (:+:) <$> term1 plate l <*> term1 plate r)
+     (\l r -> (:*:) <$> term1 plate l <*> term1 plate r)
      -- resulting in contexts:
 --     (\c t0 -> Fst <$> cxtL plate c t0 <*> term2 plate t0 t0)
 --     (\c t0 -> LSum <$> cxtL plate c t0 <*> term2 plate t0 t0)
@@ -115,7 +114,7 @@ instance Multiplate Plate where
 --     (\t0 c -> RSum <$> cxtR plate t0 c <*> term2 plate t0 t0)
   mkPlate build = Plate
      (\i -> build term1 (Base i))
---     (\t -> build term1 id)
+     (\t -> build term1 t)
      (\l r -> build term1 ((:::) l r))
      (\l r -> build term1 ((:+:) l r))
      (\l r -> build term1 ((:*:) l r))
@@ -135,4 +134,3 @@ prepareP = Base (Introduce IdentityP) ::: (Base (Eliminate SplitP) :+: Id) ::: B
 
 --testIsos :: [Iso]
 testIsos = foldFor term1 varsPlate
--}
