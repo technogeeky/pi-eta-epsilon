@@ -105,7 +105,7 @@ instance Multiplate Plate where
      (\l r -> (:::) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:+:) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:*:) <$> term1 plate l <*> term1 plate r)
-     (idT plate)
+     (pure (Id))
 
      -- resulting in contexts:
 --     (\c t0 -> Fst <$> cxtL plate c t0 <*> term2 plate t0 t0)
