@@ -133,20 +133,20 @@ postordFoldIsos :: Plate (Constant [Iso])
 postordFoldIsos = postorderFold getIsosP
 
 
-testIsos = foldFor term1 preordFoldIsos
-testIsosAlt = foldFor term1 postordFoldIsos
 
 
 --   
---             Testing Goes Here
+--             Examples for testing go here
 --
 traceS f = prepareS ::: (Id :+: f) ::: adjoint prepareS 
 traceP f = prepareP ::: (Id :*: f) ::: adjoint prepareP 
 prepareP = Base (Introduce IdentityP) ::: (Base (Eliminate SplitP) :+: Id) ::: Base (Introduce AssociativeP)
 prepareS = Base (Introduce IdentityS) ::: (Base (Eliminate SplitS) :+: Id) ::: Base (Introduce AssociativeS)
 
+-- {{{2 Preorder Folds
 
- 
+testIsos = foldFor term1 preordFoldIsos
+
 -- |
 -- >>> testIsos $ prepareP
 -- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP]
@@ -180,8 +180,10 @@ prepareS = Base (Introduce IdentityS) ::: (Base (Eliminate SplitS) :+: Id) ::: B
 -- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
 
 
+-- {{{2 Postorder Folds
 -- Postorder Folds are (evidently) the same thing here:
 --
+testIsosAlt = foldFor term1 postordFoldIsos
 
 -- |
 -- >>> testIsosAlt $ prepareP
@@ -216,3 +218,14 @@ prepareS = Base (Introduce IdentityS) ::: (Base (Eliminate SplitS) :+: Id) ::: B
 -- [Introduce IdentityS,Eliminate SplitS,Introduce AssociativeS,Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP,Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP,Eliminate AssociativeS,Introduce SplitS,Eliminate IdentityS]
 
 
+
+-- {{{1 Constant Folds
+
+doConstFold :: Plate Identity
+doConstFold = purePlate 
+          { base  = undefined
+          ,  idT  = undefined
+          , comp  = undefined
+          , plus  = undefined
+          , times = undefined
+          }
