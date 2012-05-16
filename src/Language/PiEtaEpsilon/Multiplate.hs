@@ -105,7 +105,7 @@ instance Multiplate Plate where
      (\l r -> (:::) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:+:) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:*:) <$> term1 plate l <*> term1 plate r)
-     (pure (Id))
+     (\_   -> (Id))
 
      -- resulting in contexts:
 --     (\c t0 -> Fst <$> cxtL plate c t0 <*> term2 plate t0 t0)
@@ -119,7 +119,7 @@ instance Multiplate Plate where
      (\l r -> build term1 ((:*:) l r))
 --     (\c t -> build cxtL (Fst c t) t)
 --     (\c t -> build cxtL (LSum c t) t)
-     (build term1 (Id))
+     (\_ -> build term1 (Id))
 
 --   
 --             Examples for testing go here
