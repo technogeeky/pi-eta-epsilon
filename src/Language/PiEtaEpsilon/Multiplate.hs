@@ -54,7 +54,6 @@ data Plate f = Plate
      {
      -- resulting in terms
        base    :: Iso          -> f Term
-     , idT     ::         Term -> f Term
      , comp    :: Term -> Term -> f Term
      , plus    :: Term -> Term -> f Term
      , times   :: Term -> Term -> f Term
@@ -66,6 +65,7 @@ data Plate f = Plate
 --     , rsum    :: Term -> Context -> f Context
 --     , lprod   :: Context -> Term -> UValue -> f Context
 --     , rprod   :: Term -> UValue -> Context -> f Context
+     , idT       ::  f Term
      }
 
 
@@ -75,7 +75,7 @@ term1 plate (Base i)     = base    plate i
 term1 plate ((:::) l r)  = comp    plate l r
 term1 plate ((:+:) l r)  = plus    plate l r
 term1 plate ((:*:) l r)  = times   plate l r
-term1 plate term         = idT     plate term
+term1 plate (Id)         = idT     plate
 
 
 -- I think this is wrong... I think these should be curried over one argument
@@ -99,14 +99,14 @@ cxtR plate t (RSum _ c) = rsum plate t c
 
 
 -- I guess i'll write the last two manually? maybe not:
-
 instance Multiplate Plate where
   multiplate plate = Plate
      (\i -> pure (Base i))
-     (\t -> pure t)
      (\l r -> (:::) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:+:) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:*:) <$> term1 plate l <*> term1 plate r)
+     (idT plate)
+
      -- resulting in contexts:
 --     (\c t0 -> Fst <$> cxtL plate c t0 <*> term2 plate t0 t0)
 --     (\c t0 -> LSum <$> cxtL plate c t0 <*> term2 plate t0 t0)
@@ -114,26 +114,12 @@ instance Multiplate Plate where
 --     (\t0 c -> RSum <$> cxtR plate t0 c <*> term2 plate t0 t0)
   mkPlate build = Plate
      (\i -> build term1 (Base i))
-     (\t -> build term1 t)
      (\l r -> build term1 ((:::) l r))
      (\l r -> build term1 ((:+:) l r))
      (\l r -> build term1 ((:*:) l r))
 --     (\c t -> build cxtL (Fst c t) t)
 --     (\c t -> build cxtL (LSum c t) t)
-
-
-
-getIsosP :: Plate (Constant [Iso])
-getIsosP = purePlate { base = \v -> Constant [v] }
-
-preordFoldIsos :: Plate (Constant [Iso])
-preordFoldIsos = preorderFold getIsosP
-
-postordFoldIsos :: Plate (Constant [Iso])
-postordFoldIsos = postorderFold getIsosP
-
-
-
+     (build term1 (Id))
 
 --   
 --             Examples for testing go here
@@ -143,6 +129,41 @@ traceP f = prepareP ::: (Id :*: f) ::: adjoint prepareP
 prepareP = Base (Introduce IdentityP) ::: (Base (Eliminate SplitP) :+: Id) ::: Base (Introduce AssociativeP)
 prepareS = Base (Introduce IdentityS) ::: (Base (Eliminate SplitS) :+: Id) ::: Base (Introduce AssociativeS)
 
+
+
+getIsosP :: Plate (Constant [Iso])
+getIsosP = purePlate { base = \v -> Constant [v] }
+
+
+preordFoldIsos :: Plate (Constant [Iso])
+preordFoldIsos = preorderFold getIsosP
+
+postordFoldIsos :: Plate (Constant [Iso])
+postordFoldIsos = postorderFold getIsosP
+
+
+
+getTermsP :: Plate Identity
+getTermsP = purePlate
+     { comp = doComp
+     , plus = doPlus
+     , times = doTimes
+     }
+   where
+     doComp (Id)     (Base i) = pure $ Id     ::: Base i
+     doComp (Base i) (Id)     = pure $ Base i ::: Id
+     doComp (Base x) (Base y) = pure $ Base x ::: Base y
+     doTimes (Id)     (Base i) = pure $ Id     :*: Base i
+     doTimes (Base i) (Id)     = pure $ Base i :*: Id
+     doTimes (Base x) (Base y) = pure $ Base x :*: Base y
+     doPlus (Id)     (Base i) = pure $ Id     :+: Base i
+     doPlus (Base i) (Id)     = pure $ Base i :+: Id
+     doPlus (Base x) (Base y) = pure $ Base x :+: Base y
+
+constFoldPlate :: Plate Identity
+constFoldPlate = mapFamily getTermsP
+
+testCF = traverseFor term1 constFoldPlate
 -- {{{2 Preorder Folds
 
 testIsos = foldFor term1 preordFoldIsos
@@ -150,7 +171,11 @@ testIsos = foldFor term1 preordFoldIsos
 -- |
 -- >>> testIsos $ prepareP
 -- [Introduce IdentityP,Eliminate SplitP,Introduce AssociativeP]
- 
+
+-- * Note: if you swap the l and r in multiplate plate, then you get a reverse ordered list:
+-- >>> testIsos $ prepareP
+-- [Introduce AssociativeP,Eliminate SplitP,Introduce IdentityP]
+
 -- |
 -- >>> testIsos $ adjoint prepareP
 -- [Eliminate AssociativeP,Introduce SplitP,Eliminate IdentityP]
@@ -221,6 +246,7 @@ testIsosAlt = foldFor term1 postordFoldIsos
 
 -- {{{1 Constant Folds
 
+{-
 doConstFold :: Plate Identity
 doConstFold = purePlate 
           { base  = undefined
@@ -229,3 +255,5 @@ doConstFold = purePlate
           , plus  = undefined
           , times = undefined
           }
+-}
+
