@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, TypeOperators, QuasiQuotes #-}
+{-# LANGUAGE GADTs, TypeOperators, TemplateHaskell, QuasiQuotes #-}
 module Language.PiEtaEpsilon.BNFMeta.Term where
 --from bnfc-meta
 import Language.LBNF(lbnf, dumpCode, bnfc)
