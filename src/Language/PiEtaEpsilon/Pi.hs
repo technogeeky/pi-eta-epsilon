@@ -139,6 +139,9 @@ UnfoldL        @@ (h : t)               = Right (h, t)
                                           loop c (Left v)   = loop c (c @@ (Left v))
                                           loop c (Right v)  = v
 
+versor :: a :<=> b -> b :<=> b -> a :<=> a
+versor f g = f :.: g :.: (adjoint f)
+
 ------------------------------------------------------------------------
 -- Combinational circuits 
 
@@ -293,6 +296,16 @@ addSub1 = CommuteTimes
             :.: (Id :+: CommuteTimes)
             :.: Factor 
             :.: (FoldN :*: Id) 
+
+--------------------------------------------------------------------------
+-- Counter
+
+-- 
+--------------------------------------------------------------------------
+counter :: (Int, Int) :<=> (Int, Int)
+counter = TracePlus counterLoop
+
+counterLoop = Factor :.: (Id :*: UnfoldN) :.: CommuteTimes  --(UnfoldN :*: Id) 
 
 --------------------------------------------------------------------------
 -- Iterating a list of nats.

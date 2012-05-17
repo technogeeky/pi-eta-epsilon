@@ -14,7 +14,7 @@
 --
 -- You may want to enable this (for doctest convenience):
 --
-:set prompt "\n|\n>>> "
+-- :set prompt "\n|\n>>> "
 -- 
 -- The reason this might be useful, is that you could copy/paste your ghci
 --    session into a file you're editing, and (except for commenting)
@@ -34,11 +34,10 @@
 
 ------------------------------------------------------------------------------------
 -- These the ones suggested by jfischoff, commented:
--- :set -i./src -i./tests
--- :load Main
 
--- I expect these shouldn't ever be necessary?
--- :set -package transformers-0.2.2.0 
--- :set -package mtl-2.0.1.0
+:set -i./src -i./tests
+:set -package transformers-0.2.2.0 
+:set -package mtl-2.0.1.0
+:load Main
 ------------------------------------------------------------------------------------
 

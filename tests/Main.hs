@@ -18,6 +18,7 @@ import Language.PiEtaEpsilon.Pretty.Debug
 import Debug.Trace
 import Language.PiEtaEpsilon.BNFMeta.Term
 import Language.PiEtaEpsilon.BNFMeta.Value
+import Language.PiEtaEpsilon.BNFMeta.Pi
 import qualified Language.LBNF.Grammar as G
 import Language.Haskell.TH.Quote
 import Control.Applicative
@@ -25,6 +26,10 @@ import Control.Unification
 import Control.Unification.IntVar
 import Control.Monad.Logic
 import Debug.Trace.Helpers
+import Data.Maybe
+import Prelude hiding (pi)
+import Test.Framework (Test)
+import Control.Concatenative hiding (sp)
 
 --main = quickCheck $ roundTrip ppr   (fromRight . parseType)
 
@@ -90,7 +95,7 @@ instance Arbitrary Term where
                 1 -> TPlus         <$> arb (depth `div` 2) <*> arb (depth `div` 2)
                 2 -> TTimes        <$> arb (depth `div` 2) <*> arb (depth `div` 2)
                 3 -> TBase         <$> arbitrary
-                4 -> (TId . Ident) <$> arbitrary
+                4 -> return TId       
 
 
 ---------------------------
@@ -213,24 +218,41 @@ tests = [
                 --pprParserInvPropL "Value" pprVValue parseVValue, 
                 --pprParserInvPropR "Value" pprVValue parseVValue
             ],
-            testGroup "machine tests " [
-                testCase "test_evalEliminateIdentityS" test_evalEliminateIdentityS
+            testGroup "iso eval " [
+                isoTest "Eliminate IdentityS"         ([iso| # <=+=> |]) [],
+                isoTest "Introduce IdentityS"         ([iso| ' <=+=> |]) [[value| R ()|]],                
+                isoTest "Eliminate CommutativeS"      ([iso| #  x+x  |]) [],
+                isoTest "Introduce CommutativeS"      ([iso| '  x+x  |]) [[value| R ()|]],
+                isoTest "Eliminate AssociativeS"      ([iso| # |+|+| |]) [],
+                isoTest "Introduce AssociativeS"      ([iso| ' |+|+| |]) [[value| R ()|]],
+                isoTest "Eliminate SplitS"            ([iso| #  -+<  |]) [],
+                isoTest "Introduce SplitS"            ([iso| '  -+<  |]) [[value| R ()|]],
+                isoTest "Eliminate IdentityP"         ([iso| # <=*=> |]) [],           
+                isoTest "Introduce IdentityP"         ([iso| ' <=*=> |]) [[value| ((), ()) |]],
+                isoTest "Eliminate CommutativeP"      ([iso| #  x*x  |]) [],           
+                isoTest "Introduce CommutativeP"      ([iso| '  x*x  |]) [[value| R ()|]],                
+                isoTest "Eliminate AssociativeP"      ([iso| # |*|*| |]) [],           
+                isoTest "Introduce AssociativeP"      ([iso| ' |*|*| |]) [[value| R ()|]],
+                isoTest "Eliminate DistributiveZero"  ([iso| #  ^0^  |]) [],           
+                isoTest "Introduce DistributiveZero"  ([iso| '  ^0^  |]) [[value| R ()|]],
+                isoTest "Eliminate DistributivePlus"  ([iso| #  ^+^  |]) [],           
+                isoTest "Introduce DistributivePlus"  ([iso| '  ^+^  |]) [[value| R ()|]]
             ]
             
         ]
         
 -- | IsoBase Tests            
 --------------------------------------------------------------------------------                                                                
-test_parseTermIsobase_0 = BIdentityS         @?= [baseIso| <=+=>             |]    
-test_parseTermIsobase_1 = BIdentityP         @?= [baseIso| <=*=>             |]
-test_parseTermIsobase_2 = BCommutativeS      @?= [baseIso| commutativeS      |]
-test_parseTermIsobase_3 = BCommutativeP      @?= [baseIso| commutativeP      |]
-test_parseTermIsobase_4 = BAssociativeS      @?= [baseIso| |+|+|             |]
-test_parseTermIsobase_5 = BAssociativeP      @?= [baseIso| |*|*|             |]
-test_parseTermIsobase_6 = BSplitS            @?= [baseIso| -+<               |]
-test_parseTermIsobase_7 = BSplitP            @?= [baseIso| -*<               |]
-test_parseTermIsobase_8 = BDistributiveZero  @?= [baseIso| distributiveZero  |]
-test_parseTermIsobase_9 = BDistributivePlus  @?= [baseIso| distributivePlus  |]
+test_parseTermIsobase_0 = BIdentityS         @?= [baseIso| <=+=> |]    
+test_parseTermIsobase_1 = BIdentityP         @?= [baseIso| <=*=> |]
+test_parseTermIsobase_2 = BCommutativeS      @?= [baseIso| x+x   |]
+test_parseTermIsobase_3 = BCommutativeP      @?= [baseIso| x*x   |]
+test_parseTermIsobase_4 = BAssociativeS      @?= [baseIso| |+|+| |]
+test_parseTermIsobase_5 = BAssociativeP      @?= [baseIso| |*|*| |]
+test_parseTermIsobase_6 = BSplitS            @?= [baseIso|  -+<  |]
+test_parseTermIsobase_7 = BSplitP            @?= [baseIso|  -*<  |]
+test_parseTermIsobase_8 = BDistributiveZero  @?= [baseIso|  ^0^  |]
+test_parseTermIsobase_9 = BDistributivePlus  @?= [baseIso|  ^+^  |]
 
 -- | Iso Tests                
 --------------------------------------------------------------------------------
@@ -245,32 +267,43 @@ test_parseTermTerm_12 = TCompose (TBase $ IEliminate $ BAssociativeS) (TBase $ I
 test_parseTermTerm_13 = TTimes   (TBase $ IEliminate $ BIdentityS)    (TBase $ IIntroduce $ BAssociativeS)     @?= [term| (< (# <=+=>)) * (< (' |+|+|)) |] 
 test_parseTermTerm_14 = TPlus    (TBase $ IEliminate $ BIdentityS)    (TBase $ IIntroduce $ BAssociativeS)     @?= [term| (< (# <=+=>)) + (< (' |+|+|)) |] 
 test_parseTermTerm_15 = (TBase $ IEliminate $ BAssociativeP)                                                  @?= [term| < # |*|*|                     |] 
-test_parseTermTerm_16 = TId      (Ident "i")                                                                  @?= [term| i                             |] 
+test_parseTermTerm_16 = TId                                                                        @?= [term| <=>                             |] 
 
 -- | Value Tests
 --------------------------------------------------------------------------------
 ------------------------------------------I am really testing the Unit here. Watch this guys. Watch this. This is what Unit testing is all about!
-test_parseValue_0 = VTuple  VUnit VUnit @?= [value| ( u, u ) |] 
-test_parseValue_1 = VLeft   VUnit       @?= [value| L u      |] 
-test_parseValue_2 = VRight  VUnit       @?= [value| R u      |] 
-test_parseValue_3 = VNegate VUnit       @?= [value| - u      |] 
-test_parseValue_4 = VReciprocate VUnit  @?= [value| / u      |] 
-test_parseValue_5 = VUnit               @?= [value| u        |] 
+test_parseValue_0 = VTuple  VUnit VUnit @?= [value| ((),()) |] 
+test_parseValue_1 = VLeft   VUnit       @?= [value| L ()    |] 
+test_parseValue_2 = VRight  VUnit       @?= [value| R ()    |] 
+test_parseValue_3 = VNegate VUnit       @?= [value| - ()    |] 
+test_parseValue_4 = VReciprocate VUnit  @?= [value| / ()    |] 
+test_parseValue_5 = VUnit               @?= [value| ()      |] 
 
 
 
 -- evalIso 
 ------------------------------------------------------------------------------
-termEval :: P.Term -> [UValue]
-termEval x = topLevel x unit
+termEval :: UValue -> P.Term -> [UValue]
+termEval i x = topLevel x i
 
-isoEval :: P.Iso -> [UValue]
-isoEval = termEval . P.Base
+isoEval :: UValue -> P.Iso -> [UValue]
+isoEval i x = termEval i $ P.Base x
 
-test_evalEliminateIdentityS = do
-    let actual   = isoEval $ to [iso| # <=+=> |]
-        expected = [UTerm (P.Left (UTerm Unit))]
+isoEval' = isoEval unit . to
+
+toUV = toP . to
+
+isoTest :: String -> Iso -> [Value] -> Test.Framework.Test
+isoTest name iso value = testCase name $ assertBool name $ all id
+     $ zipWith (closedAndEqual) (isoEval' iso) (map toUV value)
+
+
+
+
+
+        
+--Should make sure that all adjoints composed with each are inverse
+--
     
-    assertBool "test_evalEliminateIdentityS" $ all fst $ traceIt $ observeAll $ 
-        runIntBindingT ((all id) <$> (mapM (\(x, y) -> x === y) $ zip actual expected))
+    
 
