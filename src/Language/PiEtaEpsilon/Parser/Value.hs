@@ -1,5 +1,5 @@
-{-# LANGUAGE NoMonomorphismRestriction, MultiParamTypeClasses, TypeSynonymInstances, 
-    FunctionalDependencies, FlexibleInstances, TemplateHaskell, QuasiQuotes #-}
+{-# LANGUAGE NoMonomorphismRestriction, MultiParamTypeClasses,
+  TypeSynonymInstances, FlexibleInstances #-}
 module Language.PiEtaEpsilon.Parser.Value (To, From) where
 import Language.PiEtaEpsilon.Token
 import Language.PiEtaEpsilon.Syntax
