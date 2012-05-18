@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, DeriveFoldable, DeriveFunctor, DeriveTraversable, FlexibleInstances, TypeSynonymInstances #-}
-module Language.PiEtaEpsilon.Multiplate where
+module Language.PiEtaEpsilon.TermP where
 
 -- 0) Prelude
 -- import Prelude hiding (Either(..), negate)
@@ -44,32 +44,16 @@ import Language.PiEtaEpsilon.Evaluator (UValue, Context(..), MachineState(..), P
 import Control.Unification.IntVar
 import Control.Monad.Logic
 
--- just to get the contexts out, we'll need:
---
---   context
---   term
---   uvalue
---
+
 data Plate f = Plate
-     {
-     -- resulting in terms
-       base    :: Iso          -> f Term
+     { base    :: Iso          -> f Term
      , idT     ::                 f Term       
      , comp    :: Term -> Term -> f Term
      , plus    :: Term -> Term -> f Term
      , times   :: Term -> Term -> f Term
-     -- resulting in uvalues
-     -- resulting in contexts
---     , first   :: Context -> Term -> f Context
---     , lsum    :: Context -> Term -> f Context     
-     , second  :: Term -> Context -> f Context
-     , rsum    :: Term -> Context -> f Context
---     , lprod   :: Context -> Term -> UValue -> f Context
---     , rprod   :: Term -> UValue -> Context -> f Context
      }
 
 
-traverseTuple fa fb (a,b) = (,) <$> fa a <*> fb b
 
 term1 :: Plate f -> Term -> f Term
 term1 plate (Base i)     = base    plate i
@@ -80,20 +64,6 @@ term1 plate ((:*:) l r)  = times   plate l r
 
 
 
-{-
-cxtL :: Plate f -> Context -> Term -> f Context
-cxtL plate (Fst c ti) t0 = first plate (Fst c ti) t0
-ctxL plate (LSum c ti) t0 = lsum plate (LSum c ti) t0
--}
-
-
-cxtR :: Plate f -> Term -> Context -> f Context
-cxtR plate t (Snd _ c) = second plate t c
-cxtR plate t (RSum _ c) = rsum plate t c
-
-
-
--- I guess i'll write the last two manually? maybe not:
 instance Multiplate Plate where
   multiplate plate = Plate
      (\i -> pure (Base i))
@@ -101,20 +71,12 @@ instance Multiplate Plate where
      (\l r -> (:::) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:+:) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:*:) <$> term1 plate l <*> term1 plate r)
-
-     -- resulting in contexts:
---     (\c t -> Fst <$> cxtL plate c t <*> term1 plate t)
---     (\c t -> LSum <$> cxtL plate c t <*> term1 plate t)
-     (\t0 c -> Snd  <$> term1 plate t0 <*> cxtR plate t0 c)
-     (\t0 c -> RSum <$> term1 plate t0 <*> cxtR plate t0 c)
   mkPlate build = Plate
      (\i -> build term1 (Base i))
      (build term1 (Id))     
      (\l r -> build term1 ((:::) l r))
      (\l r -> build term1 ((:+:) l r))
      (\l r -> build term1 ((:*:) l r))
-     (\t c -> undefined)
-     (\t c -> undefined)
 
 --   
 --             Examples for testing go here
