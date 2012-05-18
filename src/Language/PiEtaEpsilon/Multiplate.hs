@@ -54,6 +54,7 @@ data Plate f = Plate
      {
      -- resulting in terms
        base    :: Iso          -> f Term
+     , idT     ::                 f Term       
      , comp    :: Term -> Term -> f Term
      , plus    :: Term -> Term -> f Term
      , times   :: Term -> Term -> f Term
@@ -61,65 +62,59 @@ data Plate f = Plate
      -- resulting in contexts
 --     , first   :: Context -> Term -> f Context
 --     , lsum    :: Context -> Term -> f Context     
---     , second  :: Term -> Context -> f Context
---     , rsum    :: Term -> Context -> f Context
+     , second  :: Term -> Context -> f Context
+     , rsum    :: Term -> Context -> f Context
 --     , lprod   :: Context -> Term -> UValue -> f Context
 --     , rprod   :: Term -> UValue -> Context -> f Context
-     , idT       ::  f Term
      }
 
 
+traverseTuple fa fb (a,b) = (,) <$> fa a <*> fb b
 
 term1 :: Plate f -> Term -> f Term
 term1 plate (Base i)     = base    plate i
+term1 plate (Id)         = idT     plate
 term1 plate ((:::) l r)  = comp    plate l r
 term1 plate ((:+:) l r)  = plus    plate l r
 term1 plate ((:*:) l r)  = times   plate l r
-term1 plate (Id)         = idT     plate
 
 
--- I think this is wrong... I think these should be curried over one argument
-term2 :: Plate f -> Term -> Term -> f Term
-term2 plate (l ::: r) = comp plate  ((:::) l r)
-term2 plate (l :+: r) = plus plate  ((:+:) l r)
-term2 plate (l :*: r) = times plate ((:*:) l r)
 
 {-
-
 cxtL :: Plate f -> Context -> Term -> f Context
-cxtL plate (Fst c _) t0 = first plate (Fst c t0) t0
-ctxL plate (LSum c _) t0 = lsum plate (LSum c t0) t0
+cxtL plate (Fst c ti) t0 = first plate (Fst c ti) t0
+ctxL plate (LSum c ti) t0 = lsum plate (LSum c ti) t0
 -}
 
-{-
+
 cxtR :: Plate f -> Term -> Context -> f Context
 cxtR plate t (Snd _ c) = second plate t c
 cxtR plate t (RSum _ c) = rsum plate t c
--}
+
 
 
 -- I guess i'll write the last two manually? maybe not:
 instance Multiplate Plate where
   multiplate plate = Plate
      (\i -> pure (Base i))
+     (pure (Id))     
      (\l r -> (:::) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:+:) <$> term1 plate l <*> term1 plate r)
      (\l r -> (:*:) <$> term1 plate l <*> term1 plate r)
-     (\_   -> (Id))
 
      -- resulting in contexts:
---     (\c t0 -> Fst <$> cxtL plate c t0 <*> term2 plate t0 t0)
---     (\c t0 -> LSum <$> cxtL plate c t0 <*> term2 plate t0 t0)
---     (\t0 c -> Snd  <$> cxtR plate t0 c <*> term2 plate t0 t0)
---     (\t0 c -> RSum <$> cxtR plate t0 c <*> term2 plate t0 t0)
+--     (\c t -> Fst <$> cxtL plate c t <*> term1 plate t)
+--     (\c t -> LSum <$> cxtL plate c t <*> term1 plate t)
+     (\t0 c -> Snd  <$> term1 plate t0 <*> cxtR plate t0 c)
+     (\t0 c -> RSum <$> term1 plate t0 <*> cxtR plate t0 c)
   mkPlate build = Plate
      (\i -> build term1 (Base i))
+     (build term1 (Id))     
      (\l r -> build term1 ((:::) l r))
      (\l r -> build term1 ((:+:) l r))
      (\l r -> build term1 ((:*:) l r))
---     (\c t -> build cxtL (Fst c t) t)
---     (\c t -> build cxtL (LSum c t) t)
-     (\_ -> build term1 (Id))
+     (\t c -> undefined)
+     (\t c -> undefined)
 
 --   
 --             Examples for testing go here
