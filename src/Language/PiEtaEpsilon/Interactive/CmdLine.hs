@@ -38,7 +38,7 @@ import Language.PiEtaEpsilon.Interactive.Version
 import Language.PiEtaEpsilon.Interactive.StatementParser
 import Language.PiEtaEpsilon.Syntax hiding (Left, Right)
 import Language.PiEtaEpsilon.Evaluator
-import Debug.Trace.Utils
+--import Debug.Trace.Utils
 import Language.PiEtaEpsilon.Pretty.REPL
 import Language.PiEtaEpsilon.Pretty.Class
 
@@ -195,6 +195,9 @@ evalStmt ec st (Stmt_eval t v)     = evalTerm st t v >> setSucc ec >> return st
 --evalStmt ec st (Stmt_isEq t1 t2) = compareTerms ec st t1 t2 >> return st
 evalStmt ec st (Stmt_let name t) = setSucc ec >> return st{ cmd_binds = Map.insert name t (cmd_binds st) }
 evalStmt ec st (Stmt_empty)      = setSucc ec >> return st
+
+
+traceItNote = undefined
 
 
 evalTerm :: PeeCmdLineState -> Term -> UValue -> IO ()

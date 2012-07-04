@@ -1,11 +1,6 @@
 {-# LANGUAGE NoMonomorphismRestriction, MultiParamTypeClasses, TypeSynonymInstances, 
-<<<<<<< HEAD
-    FlexibleInstances, TemplateHaskell, QuasiQuotes #-}
-module Language.PiEtaEpsilon.Parser.Value (toP) where
-=======
     FunctionalDependencies, FlexibleInstances, TemplateHaskell, QuasiQuotes #-}
 module Language.PiEtaEpsilon.Parser.Value (toP, parseValue) where
->>>>>>> 840c60b0d7bfece38835500f82d4c0d22ff540a8
 import Language.PiEtaEpsilon.Token
 import Language.PiEtaEpsilon.Syntax
 import Text.Parsec   
