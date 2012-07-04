@@ -38,7 +38,6 @@ import Language.PiEtaEpsilon.Interactive.Version
 import Language.PiEtaEpsilon.Interactive.StatementParser
 import Language.PiEtaEpsilon.Syntax hiding (Left, Right)
 import Language.PiEtaEpsilon.Evaluator
---import Debug.Trace.Utils
 import Language.PiEtaEpsilon.Pretty.REPL
 import Language.PiEtaEpsilon.Pretty.Class
 
@@ -201,8 +200,8 @@ traceItNote = undefined
 
 
 evalTerm :: PeeCmdLineState -> Term -> UValue -> IO ()
-evalTerm st t v = putStrLn . ppr $ topLevelWithState (cmdLineStateToMachineState st) 
-        (traceItNote "term2" t) (traceItNote "value2" v)
+evalTerm st t v = putStrLn . ppr $ 
+    topLevelWithState (cmdLineStateToMachineState st) t v
 
 cmdLineStateToMachineState = error "cmdLineStateToMachineState"
 
